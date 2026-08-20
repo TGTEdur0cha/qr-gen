@@ -1651,91 +1651,49 @@ function removeLogo(){
 }
 
 // ── URL Shortener ─────────────────────────────────────────────────────────
-// Rodando via file:// a origem e "null" e o fetch e barrado por CORS em
-// todos os servicos. Proxies publicos sao instaveis (caem, estouram limite
-// e devolvem erro sem header de CORS). Solucao: JSONP — a resposta e
-// carregada como <script>, e tag de script nao passa por CORS.
+// Hospedado em https, a origem e valida e o fetch direto costuma passar.
+// Os proxies ficam como reserva caso o servico nao envie header de CORS.
 
-var _jsonpSeq = 0;
-function jsonpRequest(buildUrl, timeoutMs){
-  return new Promise(function(resolve, reject){
-    var cb = '__qrcb' + (++_jsonpSeq) + '_' + Date.now();
-    var script = document.createElement('script');
-    var done = false;
-
-    function cleanup(){
-      try{ delete window[cb]; }catch(e){ window[cb] = undefined; }
-      if(script.parentNode) script.parentNode.removeChild(script);
-    }
-    var timer = setTimeout(function(){
-      if(done) return;
-      done = true; cleanup();
-      reject(new Error('timeout'));
-    }, timeoutMs || 12000);
-
-    window[cb] = function(data){
-      if(done) return;
-      done = true; clearTimeout(timer); cleanup();
-      resolve(data);
-    };
-    script.onerror = function(){
-      if(done) return;
-      done = true; clearTimeout(timer); cleanup();
-      reject(new Error('rede'));
-    };
-
-    script.src = buildUrl(cb);
-    document.head.appendChild(script);
-  });
-}
-
-// Proxies usados apenas para servicos SEM suporte a JSONP (ex.: tinyurl)
 var CORS_PROXIES = [
-  function(u){ return u; },
+  function(u){ return u; },  // direto
   function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
   function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
 ];
 
+function parseJsonShort(txt){
+  var d = JSON.parse(txt);
+  if(d.errorcode) throw new Error('API|' + (d.errormessage || 'erro ' + d.errorcode));
+  return d.shorturl || null;
+}
+function parsePlainShort(txt){
+  txt = (txt || '').trim();
+  return (txt.indexOf('http') === 0 && txt.length < 200) ? txt : null;
+}
+
 var SHORTENERS = [
-  {
-    name: 'is.gd',
-    run: async function(url){
-      var d = await jsonpRequest(function(cb){
-        return 'https://is.gd/create.php?format=json&callback=' + cb +
-               '&url=' + encodeURIComponent(url);
-      });
-      if(d && d.errorcode) throw new Error('API|' + (d.errormessage || 'erro ' + d.errorcode));
-      return (d && d.shorturl) || null;
-    }
-  },
-  {
-    name: 'v.gd',
-    run: async function(url){
-      var d = await jsonpRequest(function(cb){
-        return 'https://v.gd/create.php?format=json&callback=' + cb +
-               '&url=' + encodeURIComponent(url);
-      });
-      if(d && d.errorcode) throw new Error('API|' + (d.errormessage || 'erro ' + d.errorcode));
-      return (d && d.shorturl) || null;
-    }
-  },
-  {
-    name: 'tinyurl',
-    run: async function(url){
-      // sem JSONP: depende de proxy, por isso fica por ultimo
-      var api = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url);
-      for(var p = 0; p < CORS_PROXIES.length; p++){
-        try{
-          var res = await fetch(CORS_PROXIES[p](api));
-          if(!res.ok) continue;
-          var t = (await res.text()).trim();
-          if(t.indexOf('http') === 0 && t.length < 200) return t;
-        }catch(e){ continue; }
+  { name: 'is.gd',   build: function(u){ return 'https://is.gd/create.php?format=json&url=' + encodeURIComponent(u); }, parse: parseJsonShort },
+  { name: 'v.gd',    build: function(u){ return 'https://v.gd/create.php?format=json&url=' + encodeURIComponent(u); },  parse: parseJsonShort },
+  { name: 'tinyurl', build: function(u){ return 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(u); },   parse: parsePlainShort }
+];
+
+async function tryShortener(svc, url){
+  var apiUrl = svc.build(url);
+  for(var p = 0; p < CORS_PROXIES.length; p++){
+    try{
+      var res = await fetch(CORS_PROXIES[p](apiUrl));
+      if(!res.ok) continue;
+      var short = svc.parse(await res.text());
+      if(short){
+        console.log('[QR] ' + svc.name + ' via ' + (p === 0 ? 'direto' : 'proxy ' + p));
+        return short;
       }
-      return null;
+    }catch(e){
+      if(e.message && e.message.indexOf('API|') === 0) throw e;
+      continue;
     }
   }
-];
+  return null;
+}
 
 async function shortenUrl(url) {
   var apiError = null;
@@ -1745,13 +1703,10 @@ async function shortenUrl(url) {
     if(!pool.length) pool = SHORTENERS;
   }
   for(var i = 0; i < pool.length; i++) {
-    try {
-      var short = await pool[i].run(url);
-      if(short){
-        console.log('[QR] encurtado via ' + pool[i].name);
-        return short;
-      }
-    } catch(e){
+    try{
+      var short = await tryShortener(pool[i], url);
+      if(short) return short;
+    }catch(e){
       console.warn('[QR] ' + pool[i].name + ' falhou: ' + e.message);
       if(e.message && e.message.indexOf('API|') === 0) apiError = e.message.slice(4);
       continue;
