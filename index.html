@@ -1673,10 +1673,30 @@ function parsePlainShort(txt){
 var SHORTENERS = [
   { name: 'is.gd',   build: function(u){ return 'https://is.gd/create.php?format=json&url=' + encodeURIComponent(u); }, parse: parseJsonShort },
   { name: 'v.gd',    build: function(u){ return 'https://v.gd/create.php?format=json&url=' + encodeURIComponent(u); },  parse: parseJsonShort },
+  {
+    name: 'cleanuri',
+    // POST-only: nao passa por proxy, mas em https o fetch direto funciona
+    run: async function(url){
+      var res = await fetch('https://cleanuri.com/api/v1/shorten', {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: 'url=' + encodeURIComponent(url)
+      });
+      var d = await res.json();
+      if(d.error) throw new Error('API|' + d.error);
+      return d.result_url || null;
+    }
+  },
   { name: 'tinyurl', build: function(u){ return 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(u); },   parse: parsePlainShort }
 ];
 
 async function tryShortener(svc, url){
+  // servico com implementacao propria (ex.: POST)
+  if(svc.run){
+    var r = await svc.run(url);
+    if(r) console.log('[QR] ' + svc.name + ' via direto');
+    return r;
+  }
   var apiUrl = svc.build(url);
   for(var p = 0; p < CORS_PROXIES.length; p++){
     try{
