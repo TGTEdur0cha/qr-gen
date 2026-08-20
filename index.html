@@ -119,6 +119,13 @@ button.clear-history:hover{border-color:var(--red);color:var(--red)}
 .shorten-select{background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Space Mono',monospace;font-size:.66rem;padding:.3rem .45rem;outline:none;cursor:pointer;transition:border-color .2s;width:auto}
 .shorten-select:focus,.shorten-select:hover{border-color:var(--accent)}
 
+/* Campo de apelido do encurtador proprio */
+.slug-row{display:none;align-items:center;gap:.4rem;margin-top:.6rem}
+.slug-row.visible{display:flex}
+.slug-prefix{font-family:'Space Mono',monospace;font-size:.8rem;color:var(--accent)}
+.slug-row input[type=text]{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Space Mono',monospace;font-size:.72rem;padding:.5rem .75rem;outline:none}
+.slug-row input[type=text]:focus{border-color:var(--accent)}
+
 footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--border);letter-spacing:.1em;text-align:center}
 </style>
 </head>
@@ -143,6 +150,11 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
       </label>
       <select class="shorten-select" id="shortenerSelect" title="Qual servico usar"></select>
       <span class="shorten-status" id="shortenStatus"></span>
+    </div>
+    <!-- Apelido personalizado (so aparece no encurtador proprio) -->
+    <div class="slug-row" id="slugRow">
+      <span class="slug-prefix">/</span>
+      <input type="text" id="slugInput" placeholder="apelido opcional (ex: kerry-natal)" maxlength="50"/>
     </div>
     <!-- Shortened URL result -->
     <div class="shorten-result" id="shortenResult">
@@ -1671,22 +1683,25 @@ function parsePlainShort(txt){
 }
 
 var SHORTENERS = [
-  { name: 'is.gd',   build: function(u){ return 'https://is.gd/create.php?format=json&url=' + encodeURIComponent(u); }, parse: parseJsonShort },
-  { name: 'v.gd',    build: function(u){ return 'https://v.gd/create.php?format=json&url=' + encodeURIComponent(u); },  parse: parseJsonShort },
   {
-    name: 'cleanuri',
-    // POST-only: nao passa por proxy, mas em https o fetch direto funciona
+    name: 'TGT',
+    // encurtador proprio: mesma origem, sem CORS, sem propaganda
     run: async function(url){
-      var res = await fetch('https://cleanuri.com/api/v1/shorten', {
+      var slug = '';
+      var el = document.getElementById('slugInput');
+      if(el) slug = (el.value || '').trim();
+      var res = await fetch('/api/shorten', {
         method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        body: 'url=' + encodeURIComponent(url)
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ url: url, slug: slug })
       });
       var d = await res.json();
       if(d.error) throw new Error('API|' + d.error);
-      return d.result_url || null;
+      return d.short || null;
     }
   },
+  { name: 'is.gd',   build: function(u){ return 'https://is.gd/create.php?format=json&url=' + encodeURIComponent(u); }, parse: parseJsonShort },
+  { name: 'v.gd',    build: function(u){ return 'https://v.gd/create.php?format=json&url=' + encodeURIComponent(u); },  parse: parseJsonShort },
   { name: 'tinyurl', build: function(u){ return 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(u); },   parse: parsePlainShort }
 ];
 
@@ -1754,7 +1769,20 @@ function initShortenerSelect(){
   sel.onchange = function(){
     shortenerChoice = sel.value;
     try{ localStorage.setItem('qr_shortener', sel.value); }catch(e){}
+    updateSlugRow();
   };
+  updateSlugRow();
+}
+
+// o apelido so faz sentido no encurtador proprio
+function updateSlugRow(){
+  var row = document.getElementById('slugRow');
+  if(!row) return;
+  if(shortenerChoice === 'TGT' || shortenerChoice === 'auto'){
+    row.classList.add('visible');
+  } else {
+    row.classList.remove('visible');
+  }
 }
 initShortenerSelect();
 
