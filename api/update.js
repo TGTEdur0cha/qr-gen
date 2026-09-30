@@ -1,6 +1,6 @@
-// POST /api/update  { slug, url }  — troca o destino de um apelido existente
+// POST /api/update  { slug, url?, name? }  — troca destino e/ou nome de um link existente
 // Header: x-admin-password
-// -> { ok: true, slug, url }
+// -> { ok: true, slug, url?, name? }
 
 const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
@@ -47,12 +47,18 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const slug = (body.slug || '').trim().toLowerCase();
-    const url = (body.url || '').trim();
+    const hasUrl = typeof body.url === 'string';
+    const hasName = typeof body.name === 'string';
+    const url = hasUrl ? body.url.trim() : '';
+    const name = hasName ? body.name.trim().slice(0, 80) : '';
 
     if (!/^[a-z0-9-]{3,50}$/.test(slug)) {
       return res.status(400).json({ error: 'Apelido invalido' });
     }
-    if (!/^https?:\/\/.+/i.test(url)) {
+    if (!hasUrl && !hasName) {
+      return res.status(400).json({ error: 'Nada para atualizar' });
+    }
+    if (hasUrl && !/^https?:\/\/.+/i.test(url)) {
       return res.status(400).json({ error: 'URL invalida — precisa comecar com http:// ou https://' });
     }
 
@@ -61,15 +67,24 @@ export default async function handler(req, res) {
     if (!existing) {
       return res.status(404).json({ error: 'Esse apelido nao existe' });
     }
-    if (existing === url) {
-      return res.status(200).json({ ok: true, slug, url, unchanged: true });
+
+    const out = { ok: true, slug };
+
+    if (hasUrl && url !== existing) {
+      await kv(['SET', 'l:' + slug, url]);
+      // guarda o destino anterior, caso precise voltar atras
+      await kv(['SET', 'p:' + slug, existing]);
+      out.url = url;
+      out.previous = existing;
     }
 
-    await kv(['SET', 'l:' + slug, url]);
-    // guarda o destino anterior, caso precise voltar atras
-    await kv(['SET', 'p:' + slug, existing]);
+    if (hasName) {
+      if (name) await kv(['SET', 'n:' + slug, name]);
+      else await kv(['DEL', 'n:' + slug]);
+      out.name = name;
+    }
 
-    return res.status(200).json({ ok: true, slug, url, previous: existing });
+    return res.status(200).json(out);
   } catch (e) {
     return res.status(500).json({ error: 'Falha ao atualizar o link' });
   }

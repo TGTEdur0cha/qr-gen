@@ -46,6 +46,10 @@ button:active{transform:scale(.97)}
 .link-item{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:1rem 1.1rem;margin-bottom:.6rem;transition:border-color .2s}
 .link-item.dirty{border-color:var(--accent)}
 .link-head{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
+.name-input{width:100%;background:transparent !important;border:1px solid transparent !important;border-radius:2px;color:var(--text);font-family:'Syne',sans-serif !important;font-weight:700;font-size:1rem !important;padding:.3rem .45rem !important;margin:-.3rem 0 .35rem -.45rem;outline:none;transition:border-color .2s,background .2s}
+.name-input:hover{border-color:var(--border) !important}
+.name-input:focus{border-color:var(--accent) !important;background:var(--bg) !important}
+.name-input::placeholder{color:var(--muted);font-weight:400;font-style:italic}
 .slug{font-family:'Space Mono',monospace;font-size:.82rem;font-weight:700;color:var(--accent)}
 .slug .dim{color:var(--muted);font-weight:400}
 .meta{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);margin-left:auto;text-align:right;white-space:nowrap}
@@ -92,7 +96,7 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.62rem;col
   <!-- Painel -->
   <div id="panel" class="hidden">
     <div class="toolbar">
-      <input type="text" id="filterInput" placeholder="filtrar por apelido ou destino..."/>
+      <input type="text" id="filterInput" placeholder="filtrar por nome, apelido ou destino..."/>
       <span class="count" id="count"></span>
       <button class="btn-ghost" id="reloadBtn">Recarregar</button>
       <button class="btn-ghost" id="logoutBtn">Sair</button>
@@ -197,6 +201,7 @@ function render(){
   var shown = LINKS.filter(function(l){
     if(!term) return true;
     return l.slug.toLowerCase().indexOf(term) !== -1 ||
+           (l.name || '').toLowerCase().indexOf(term) !== -1 ||
            (l.url || '').toLowerCase().indexOf(term) !== -1;
   });
 
@@ -217,13 +222,24 @@ function render(){
     var item = document.createElement('div');
     item.className = 'link-item';
 
-    // cabecalho: apelido + cliques + data
+    // nome do QR (editavel direto no titulo)
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'name-input';
+    nameInput.maxLength = 80;
+    nameInput.value = link.name || '';
+    nameInput.placeholder = 'sem nome — clique para dar um nome';
+    nameInput.spellcheck = false;
+    item.appendChild(nameInput);
+
+    // cabecalho: apelido + acessos + data
     var head = document.createElement('div');
     head.className = 'link-head';
 
     var slug = document.createElement('span');
     slug.className = 'slug';
-    slug.innerHTML = '<span class="dim">/</span>' + link.slug;
+    slug.innerHTML = '<span class="dim">/</span>';
+    slug.appendChild(document.createTextNode(link.slug));
     head.appendChild(slug);
 
     var meta = document.createElement('span');
@@ -234,7 +250,7 @@ function render(){
 
     item.appendChild(head);
 
-    // linha de edicao
+    // linha de edicao do destino
     var row = document.createElement('div');
     row.className = 'edit-row';
 
@@ -260,22 +276,25 @@ function render(){
     rowMsg.className = 'row-msg';
     item.appendChild(rowMsg);
 
-    // marca como alterado quando o texto difere do salvo
-    input.addEventListener('input', function(){
-      if(input.value.trim() !== link.url){
-        item.classList.add('dirty');
-      } else {
-        item.classList.remove('dirty');
-      }
+    function isDirty(){
+      return input.value.trim() !== link.url ||
+             nameInput.value.trim() !== (link.name || '');
+    }
+    function onEdit(){
+      item.classList.toggle('dirty', isDirty());
       rowMsg.textContent = '';
       rowMsg.className = 'row-msg';
       saveBtn.textContent = 'Salvar';
       saveBtn.classList.remove('saved');
-    });
+    }
+    input.addEventListener('input', onEdit);
+    nameInput.addEventListener('input', onEdit);
 
-    input.addEventListener('keydown', function(e){
-      if(e.key === 'Enter' && item.classList.contains('dirty')) save();
-    });
+    function onEnter(e){
+      if(e.key === 'Enter' && isDirty()) save();
+    }
+    input.addEventListener('keydown', onEnter);
+    nameInput.addEventListener('keydown', onEnter);
 
     copyBtn.onclick = function(){
       var short = shortBase() + link.slug;
@@ -287,32 +306,41 @@ function render(){
           copyBtn.classList.remove('copied');
         }, 2000);
       };
-      if(navigator.clipboard){
-        navigator.clipboard.writeText(short).then(done).catch(function(){
-          var ta = document.createElement('textarea');
-          ta.value = short; document.body.appendChild(ta); ta.select();
-          document.execCommand('copy'); document.body.removeChild(ta); done();
-        });
-      } else {
+      var fallback = function(){
         var ta = document.createElement('textarea');
         ta.value = short; document.body.appendChild(ta); ta.select();
         document.execCommand('copy'); document.body.removeChild(ta); done();
+      };
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(short).then(done).catch(fallback);
+      } else {
+        fallback();
       }
     };
 
     async function save(){
-      var novo = input.value.trim();
-      if(novo === link.url) return;
+      var novaUrl = input.value.trim();
+      var novoNome = nameInput.value.trim();
+      var payload = { slug: link.slug };
+      var urlMudou = novaUrl !== link.url;
+      var nomeMudou = novoNome !== (link.name || '');
+      if(urlMudou) payload.url = novaUrl;
+      if(nomeMudou) payload.name = novoNome;
+      if(!urlMudou && !nomeMudou) return;
+
       saveBtn.disabled = true;
       rowMsg.textContent = 'salvando...';
       rowMsg.className = 'row-msg';
       try {
-        await api('/api/update', { slug: link.slug, url: novo });
-        link.url = novo;
+        await api('/api/update', payload);
+        if(urlMudou) link.url = novaUrl;
+        if(nomeMudou) link.name = novoNome;
         item.classList.remove('dirty');
         saveBtn.textContent = '✓ Salvo';
         saveBtn.classList.add('saved');
-        rowMsg.textContent = 'destino atualizado — o QR impresso continua valendo';
+        rowMsg.textContent = urlMudou
+          ? 'destino atualizado — o QR impresso continua valendo'
+          : 'nome atualizado';
         rowMsg.className = 'row-msg ok';
         setTimeout(function(){
           saveBtn.textContent = 'Salvar';

@@ -1,6 +1,6 @@
 // POST /api/list  — lista todos os links criados
 // Header: x-admin-password
-// -> { links: [{ slug, url, clicks, created }] }
+// -> { links: [{ slug, name, url, clicks, created }] }
 
 const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
@@ -62,9 +62,11 @@ export default async function handler(req, res) {
     const urls = await kv(['MGET', ...slugs.map(s => 'l:' + s)]);
     const clicks = await kv(['MGET', ...slugs.map(s => 'c:' + s)]);
     const created = await kv(['MGET', ...slugs.map(s => 't:' + s)]);
+    const names = await kv(['MGET', ...slugs.map(s => 'n:' + s)]);
 
     const links = slugs.map((slug, i) => ({
       slug,
+      name: names[i] || '',
       url: urls[i] || '',
       clicks: Number(clicks[i] || 0),
       created: created[i] ? Number(created[i]) : null

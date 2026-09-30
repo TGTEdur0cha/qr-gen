@@ -43,6 +43,7 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const url = (body.url || '').trim();
     let slug = (body.slug || '').trim().toLowerCase();
+    const name = String(body.name || '').trim().slice(0, 80);
 
     // valida a URL de destino
     if (!/^https?:\/\/.+/i.test(url)) {
@@ -78,6 +79,8 @@ export default async function handler(req, res) {
     await kv(['SET', 'l:' + slug, url]);
     // data de criacao, usada na area de gerenciamento
     await kv(['SET', 't:' + slug, String(Date.now())]);
+    // nome interno do QR (opcional), so pra identificar no painel
+    if (name) await kv(['SET', 'n:' + slug, name]);
 
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     const proto = req.headers['x-forwarded-proto'] || 'https';

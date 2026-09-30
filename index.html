@@ -13,6 +13,16 @@
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,241,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(200,241,53,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 .container{position:relative;z-index:1;width:100%;max-width:600px}
+/* Layout em duas colunas no desktop */
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem}
+.controls{min-width:0}
+.preview-panel{min-width:0}
+@media(min-width:1000px){
+  body{justify-content:flex-start}
+  .container{max-width:1160px}
+  .layout{grid-template-columns:minmax(0,1fr) 400px;gap:1.5rem;align-items:start}
+  .preview-panel{position:sticky;top:1.5rem;padding-top:.25rem}
+}
 header{margin-bottom:2.5rem}
 .tag{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}
 h1{font-size:clamp(2.5rem,8vw,4rem);font-weight:800;line-height:.95;letter-spacing:-.03em}
@@ -86,17 +96,29 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
 .alpha-val{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);white-space:nowrap;min-width:2.2rem;text-align:right}
 
 /* Output */
-.output{display:none;flex-direction:column;align-items:center;gap:1.5rem;margin-top:1rem}
+.output{display:none;flex-direction:column;align-items:center;gap:1.1rem}
 .output.visible{display:flex}
 .qr-wrapper{display:inline-block;position:relative;box-shadow:0 0 0 1px var(--border),8px 8px 0 var(--accent);animation:pop .3s cubic-bezier(.34,1.56,.64,1);line-height:0}
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-#qrcanvas{display:block}
+#qrcanvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+/* Caixa de preview */
+.preview-box{margin-bottom:0}
+.qr-stage{display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:1.75rem 1.25rem 1.5rem;min-height:340px}
+.qr-stage .output{width:100%}
+.qr-wrapper{width:min(100%,280px)}
+.qr-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;width:min(100%,280px);aspect-ratio:1;border:1px dashed var(--border);border-radius:2px;font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);text-align:center;padding:1rem}
+.qr-empty-icon{font-size:1.6rem;color:var(--border);line-height:1}
+.output.visible + .qr-empty{display:none}
+.size-note{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.generate-big{width:100%;padding:1rem;font-size:1rem;margin-top:1rem}
+.panel-footer{margin-top:1rem;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align:center;letter-spacing:.08em}
 .url-display-row{display:flex;flex-direction:column;align-items:center;gap:.5rem}
-.url-display{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--muted);text-align:center;word-break:break-all;max-width:360px}
+.url-display{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--muted);text-align:center;word-break:break-all;max-width:100%}
 .copy-url-btn{background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--muted);font-family:'Space Mono',monospace;font-size:.65rem;padding:.35rem .8rem;cursor:pointer;transition:all .15s}
 .copy-url-btn:hover{border-color:var(--accent);color:var(--accent)}
 .copy-url-btn.copied{border-color:#4caf50;color:#4caf50}
-.actions{display:flex;gap:.75rem}
+.actions{display:flex;gap:.75rem;width:100%}
+.actions button.download{flex:1}
 button.download{background:transparent;border:1px solid var(--accent);border-radius:2px;color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;padding:.75rem 1.5rem;cursor:pointer;transition:background .2s,color .2s}
 button.download:hover{background:var(--accent);color:#0a0a0a}
 
@@ -112,6 +134,7 @@ button.clear-history:hover{border-color:var(--red);color:var(--red)}
 .history-thumb{width:40px;height:40px;flex-shrink:0;image-rendering:pixelated;border-radius:1px}
 .history-meta{flex:1;min-width:0}
 .history-url{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-name{font-size:.78rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.15rem}
 .history-time{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:.2rem}
 .history-del{background:transparent;border:none;color:var(--muted);font-size:.8rem;cursor:pointer;padding:.2rem .4rem;border-radius:2px;transition:color .15s;flex-shrink:0}
 .history-del:hover{color:var(--red)}
@@ -134,6 +157,8 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
 </head>
 <body>
 <div class="container">
+<div class="layout">
+<div class="controls">
   <header>
     <p class="tag">// ferramenta gratuita</p>
     <h1>QR<br/><span>CODE</span><br/>GEN</h1>
@@ -158,6 +183,11 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     <div class="slug-row visible" id="slugRow">
       <span class="slug-prefix">/</span>
       <input type="text" id="slugInput" placeholder="ex: kerry-natal" maxlength="50"/>
+    </div>
+    <!-- Nome interno do QR: so pra identificar no painel, nao aparece no link -->
+    <p class="section-label slug-label">Nome do QR (pra identificar depois)</p>
+    <div class="slug-row visible">
+      <input type="text" id="nameInput" placeholder="ex: Folder Kerry — gráfica Natal 2026" maxlength="80"/>
     </div>
     <!-- Shortened URL result -->
     <div class="shorten-result" id="shortenResult">
@@ -269,18 +299,6 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     </div>
   </div>
 
-  <!-- Output -->
-  <div class="output" id="output">
-    <div class="qr-wrapper"><canvas id="qrcanvas"></canvas></div>
-    <div class="url-display-row">
-      <p class="url-display" id="urlDisplay"></p>
-      <button class="copy-url-btn" id="copyUrlBtn" onclick="copyGeneratedUrl()">Copiar link</button>
-    </div>
-    <div class="actions">
-      <button class="download" onclick="downloadQR()">↓ Baixar PNG</button>
-    </div>
-  </div>
-
   <!-- History -->
   <div class="history-section" id="historySection" style="display:none">
     <div class="card">
@@ -292,9 +310,35 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     </div>
   </div>
 
-  <div style="margin-bottom:1rem">
-    <button class="generate" style="width:100%;padding:1rem;font-size:1rem" onclick="generate()">Gerar QR Code</button>
-  </div>
+</div><!-- /controls -->
+
+  <!-- Preview fixo (coluna da direita no desktop) -->
+  <aside class="preview-panel" id="previewPanel">
+    <div class="card preview-box">
+      <p class="section-label">Preview</p>
+      <div class="qr-stage">
+        <div class="output" id="output">
+          <div class="qr-wrapper"><canvas id="qrcanvas"></canvas></div>
+          <p class="size-note" id="sizeNote"></p>
+          <div class="url-display-row">
+            <p class="url-display" id="urlDisplay"></p>
+            <button class="copy-url-btn" id="copyUrlBtn" onclick="copyGeneratedUrl()">Copiar link</button>
+          </div>
+          <div class="actions">
+            <button class="download" onclick="downloadQR()">↓ Baixar PNG</button>
+          </div>
+        </div>
+        <div class="qr-empty">
+          <span class="qr-empty-icon">▦</span>
+          o QR code aparece aqui
+        </div>
+      </div>
+      <button class="generate generate-big" onclick="generate()">Gerar QR Code</button>
+      <p class="panel-footer">ajuste as opções e gere de novo</p>
+    </div>
+  </aside>
+</div><!-- /layout -->
+
   <footer>funciona no navegador — histórico salvo localmente<br/><a class="admin-link" href="/admin.html">gerenciar links criados</a></footer>
 </div>
 
@@ -1669,6 +1713,16 @@ function removeLogo(){
 // Mesma origem: sem CORS, sem proxy, sem propaganda, sem pagina intermediaria.
 // Backend: api/shorten.js + api/redirect.js (Upstash Redis).
 
+function qrName(){
+  var el = document.getElementById('nameInput');
+  return el ? (el.value || '').trim() : '';
+}
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
 async function shortenUrl(url) {
   var slug = '';
   var el = document.getElementById('slugInput');
@@ -1677,7 +1731,7 @@ async function shortenUrl(url) {
   var res = await fetch('/api/shorten', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ url: url, slug: slug })
+    body: JSON.stringify({ url: url, slug: slug, name: qrName() })
   });
   var d = await res.json();
   if(d.error) throw new Error(d.error);
@@ -1723,7 +1777,7 @@ function addToHistory(url, dataUrl) {
   var h = getHistory();
   // Remove duplicate
   h = h.filter(function(i){ return i.url !== url; });
-  h.unshift({ url: url, thumb: dataUrl, time: Date.now() });
+  h.unshift({ url: url, thumb: dataUrl, time: Date.now(), name: qrName() });
   if(h.length > 20) h = h.slice(0, 20);
   saveHistory(h);
   renderHistory();
@@ -1743,7 +1797,8 @@ function renderHistory() {
     el.innerHTML =
       '<img class="history-thumb" src="' + item.thumb + '" alt="qr"/>' +
       '<div class="history-meta">' +
-        '<div class="history-url">' + item.url + '</div>' +
+        (item.name ? '<div class="history-name">' + escHtml(item.name) + '</div>' : '') +
+        '<div class="history-url">' + escHtml(item.url) + '</div>' +
         '<div class="history-time">' + timeStr + '</div>' +
       '</div>' +
       '<button class="history-del" title="Remover" onclick="removeHistory('+idx+',event)">✕</button>';
@@ -1916,6 +1971,13 @@ async function generate() {
   function finishRender() {
     document.getElementById('urlDisplay').textContent = text;
     document.getElementById('output').classList.add('visible');
+    var sn = document.getElementById('sizeNote');
+    if(sn) sn.textContent = 'arquivo: ' + size + ' × ' + size + ' px';
+    // no celular o preview fica embaixo: leva a tela ate ele
+    if(window.innerWidth < 1000){
+      var pp = document.getElementById('previewPanel');
+      if(pp) pp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
     // Save to history with small thumbnail
     var thumb = canvas.toDataURL('image/png');
     addToHistory(rawText, thumb);
