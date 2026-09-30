@@ -187,6 +187,21 @@ button.clear-history:hover{border-color:var(--red);color:var(--red)}
 .pal-save-btn:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:520px){.pal-save-row{flex-wrap:wrap}.pal-save-btn{width:100%}}
 
+/* Secoes que abrem e fecham */
+.fold-head{display:flex;align-items:center;gap:.6rem;cursor:pointer;user-select:none;margin:-1.5rem -1.5rem 0;padding:1.5rem 1.5rem 1.1rem}
+.fold-head:focus-visible{outline:1px solid var(--accent);outline-offset:-1px}
+.fold-head > .section-label,.fold-head .section-label{margin-bottom:0 !important}
+.fold-head::after{content:'';width:7px;height:7px;flex-shrink:0;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg) translateY(-2px);transition:transform .2s,border-color .2s;order:3}
+.fold-head:hover::after{border-color:var(--accent)}
+.fold-head:hover .section-label{color:var(--text)}
+.fold-head .pal-status,.fold-head .clear-history{order:2}
+.card.collapsed{padding-bottom:0}
+.card.collapsed .fold-head{padding-bottom:1.4rem;padding-top:1.4rem}
+.card.collapsed .fold-head::after{transform:rotate(-45deg)}
+.card.collapsed .fold-body{display:none}
+.fold-summary{flex:1;min-width:0;order:1;font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card:not(.collapsed) .fold-summary{visibility:hidden}
+
 footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--border);letter-spacing:.1em;text-align:center}
 </style>
 </head>
@@ -240,12 +255,12 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
   </div>
 
   <!-- Style Options -->
-  <div class="card">
+  <div class="card" data-fold="config">
     <p class="section-label">Configurações</p>
     <div class="options-grid">
       <div class="opt-group">
         <p class="section-label">Tamanho</p>
-        <select id="sizeSelect">
+        <select id="sizeSelect" autocomplete="off">
           <option value="128">128 px</option>
           <option value="200" selected>200 px</option>
           <option value="256">256 px</option>
@@ -258,7 +273,7 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
       </div>
       <div class="opt-group">
         <p class="section-label">Nível de correção</p>
-        <select id="ecLevel">
+        <select id="ecLevel" autocomplete="off">
           <option value="L">L — mínimo</option>
           <option value="M">M — médio</option>
           <option value="Q" selected>Q — bom</option>
@@ -267,13 +282,13 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
       </div>
       <div class="opt-group">
         <p class="section-label">Cor dos pontos</p>
-        <input type="color" id="dotColor" value="#000000"/>
+        <input type="color" id="dotColor" autocomplete="off" value="#000000"/>
       </div>
       <div class="opt-group">
         <p class="section-label">Cor do fundo</p>
         <div class="alpha-picker">
-          <input type="color" id="bgColor" value="#ffffff"/>
-          <input type="range" id="bgAlpha" min="0" max="100" value="100" title="Opacidade"
+          <input type="color" id="bgColor" autocomplete="off" value="#ffffff"/>
+          <input type="range" id="bgAlpha" autocomplete="off" min="0" max="100" value="100" title="Opacidade"
             oninput="document.getElementById('bgAlphaVal').textContent=this.value+'%'"/>
           <span class="alpha-val" id="bgAlphaVal">100%</span>
         </div>
@@ -303,17 +318,17 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     <div class="options-grid">
       <div class="opt-group">
         <p class="section-label">Cor da borda do marcador</p>
-        <input type="color" id="cornerSquareColor" value="#000000"/>
+        <input type="color" id="cornerSquareColor" autocomplete="off" value="#000000"/>
       </div>
       <div class="opt-group">
         <p class="section-label">Cor do centro do marcador</p>
-        <input type="color" id="cornerDotColor" value="#000000"/>
+        <input type="color" id="cornerDotColor" autocomplete="off" value="#000000"/>
       </div>
     </div>
   </div>
 
   <!-- Paletas de cor (compartilhadas) -->
-  <div class="card">
+  <div class="card" data-fold="paletas">
     <div class="pal-header">
       <p class="section-label" style="margin-bottom:0">Paletas de cor</p>
       <span class="pal-status" id="palStatus"></span>
@@ -329,7 +344,7 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
   </div>
 
   <!-- Logo -->
-  <div class="card">
+  <div class="card" data-fold="logo">
     <p class="section-label">Logo no centro (opcional)</p>
     <div class="logo-drop" id="logoDrop">
       <input type="file" id="logoInput" accept="image/*"/>
@@ -345,14 +360,14 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     </div>
     <div class="logo-size-row">
       <span class="logo-size-label">Tamanho do logo</span>
-      <input type="range" id="logoSize" min="5" max="40" value="20" oninput="document.getElementById('logoSizeVal').textContent=this.value+'%'"/>
+      <input type="range" id="logoSize" autocomplete="off" min="5" max="40" value="20" oninput="document.getElementById('logoSizeVal').textContent=this.value+'%'"/>
       <span class="logo-size-val" id="logoSizeVal">20%</span>
     </div>
   </div>
 
   <!-- History -->
   <div class="history-section" id="historySection" style="display:none">
-    <div class="card">
+    <div class="card" data-fold="historico">
       <div class="history-header">
         <p class="section-label" style="margin-bottom:0">Histórico</p>
         <button class="clear-history" onclick="clearHistory()">✕ Limpar tudo</button>
@@ -2066,6 +2081,7 @@ function addToHistory(url, dataUrl) {
   renderHistory();
 }
 function renderHistory() {
+  if(typeof refreshFoldSummaries === 'function') setTimeout(refreshFoldSummaries, 0);
   var h = getHistory();
   var section = document.getElementById('historySection');
   var list = document.getElementById('historyList');
@@ -2344,6 +2360,110 @@ function downloadQR() {
 document.getElementById('urlInput').addEventListener('keydown', function(e){
   if(e.key==='Enter') generate();
 });
+
+// ── Sempre abre no padrao preto e branco ──────────────────────────────────
+function resetDefaults(){
+  var set = function(id, v){ var el = document.getElementById(id); if(el) el.value = v; };
+  set('sizeSelect', '200');
+  set('ecLevel', 'Q');
+  set('dotColor', '#000000');
+  set('bgColor', '#ffffff');
+  set('bgAlpha', '100');
+  set('cornerSquareColor', '#000000');
+  set('cornerDotColor', '#000000');
+  set('logoSize', '20');
+  var a = document.getElementById('bgAlphaVal'); if(a) a.textContent = '100%';
+  var l = document.getElementById('logoSizeVal'); if(l) l.textContent = '20%';
+  if(typeof renderPalettes === 'function') renderPalettes();
+}
+resetDefaults();
+// voltar pela seta do navegador tambem nao traz cor antiga
+window.addEventListener('pageshow', function(e){ if(e.persisted) resetDefaults(); });
+
+// ── Secoes que abrem e fecham (lembra o estado neste navegador) ───────────
+var FOLD_DEFAULT = { config: false, paletas: true, logo: false, historico: false }; // true = aberto
+function foldState(){
+  try { return JSON.parse(localStorage.getItem('qr_fold') || '{}'); } catch(e){ return {}; }
+}
+function saveFold(key, open){
+  try { var s = foldState(); s[key] = open; localStorage.setItem('qr_fold', JSON.stringify(s)); } catch(e){}
+}
+function foldSummary(key){
+  if(key === 'config'){
+    var sz = document.getElementById('sizeSelect').value;
+    var ec = document.getElementById('ecLevel').value;
+    return sz + ' px · correção ' + ec;
+  }
+  if(key === 'logo'){
+    var row = document.getElementById('logoPreviewRow');
+    return (row && row.classList.contains('visible')) ? '✓ logo carregado' : 'sem logo';
+  }
+  if(key === 'historico'){
+    try { var n = JSON.parse(localStorage.getItem('qrhistory') || '[]').length; return n + (n === 1 ? ' item' : ' itens'); }
+    catch(e){ return ''; }
+  }
+  return '';
+}
+function refreshFoldSummaries(){
+  document.querySelectorAll('.card[data-fold]').forEach(function(card){
+    var s = card.querySelector('.fold-summary');
+    if(s) s.textContent = foldSummary(card.getAttribute('data-fold'));
+  });
+}
+(function setupFolds(){
+  var saved = foldState();
+  document.querySelectorAll('.card[data-fold]').forEach(function(card){
+    var key = card.getAttribute('data-fold');
+    var head = card.firstElementChild;
+    var body = document.createElement('div');
+    body.className = 'fold-body';
+    while(head.nextSibling) body.appendChild(head.nextSibling);
+    card.appendChild(body);
+
+    head.classList.add('fold-head');
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    var sum = document.createElement('span');
+    sum.className = 'fold-summary';
+    var label = head.classList.contains('section-label') ? null : head.querySelector('.section-label');
+    if(label){ label.insertAdjacentElement('afterend', sum); }
+    else {
+      // cabecalho e o proprio rotulo: embrulha pra caber o resumo
+      var wrap = document.createElement('div');
+      head.parentNode.insertBefore(wrap, head);
+      wrap.appendChild(head);
+      head.classList.remove('fold-head'); head.removeAttribute('role'); head.removeAttribute('tabindex');
+      wrap.className = 'fold-head';
+      wrap.setAttribute('role', 'button');
+      wrap.setAttribute('tabindex', '0');
+      wrap.appendChild(sum);
+      head = wrap;
+    }
+
+    var open = (key in saved) ? saved[key] : FOLD_DEFAULT[key];
+    card.classList.toggle('collapsed', !open);
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+    var toggle = function(){
+      var nowOpen = card.classList.contains('collapsed');
+      card.classList.toggle('collapsed', !nowOpen);
+      head.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+      saveFold(key, nowOpen);
+      refreshFoldSummaries();
+    };
+    head.addEventListener('click', function(e){
+      if(e.target.closest('button')) return; // ex.: "Limpar tudo" do historico
+      toggle();
+    });
+    head.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+    });
+  });
+  refreshFoldSummaries();
+  ['sizeSelect','ecLevel'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', refreshFoldSummaries);
+  });
+})();
 
 // Init history on load
 renderHistory();
