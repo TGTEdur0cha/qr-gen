@@ -152,6 +152,31 @@ button.clear-history:hover{border-color:var(--red);color:var(--red)}
 .admin-link{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border);display:inline-block;margin-top:.5rem;letter-spacing:.1em}
 .admin-link:hover{color:var(--accent);border-color:var(--accent)}
 
+/* Paletas */
+.pal-header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.5rem}
+.pal-status{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted)}
+.pal-status.ok{color:var(--accent)}
+.pal-status.err{color:var(--red)}
+.pal-hint{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);margin-bottom:.9rem;line-height:1.5}
+.pal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem;margin-bottom:.9rem}
+.pal-chip{position:relative;display:flex;flex-direction:column;gap:.45rem;background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:.55rem;cursor:pointer;text-align:left;transition:border-color .15s}
+.pal-chip:hover{border-color:var(--accent)}
+.pal-chip.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.pal-swatches{display:flex;height:22px;border-radius:1px;overflow:hidden;border:1px solid var(--border)}
+.pal-swatches span{flex:1}
+.pal-name{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:1rem}
+.pal-del{position:absolute;right:.3rem;bottom:.3rem;background:transparent;border:none;color:var(--muted);font-size:.72rem;line-height:1;padding:.15rem .25rem;cursor:pointer;opacity:0;transition:opacity .15s,color .15s}
+.pal-chip:hover .pal-del{opacity:1}
+.pal-del:hover{color:var(--red)}
+.pal-del.confirm{opacity:1;color:var(--red);font-family:'Space Mono',monospace;font-size:.58rem}
+.pal-empty{grid-column:1/-1;font-family:'Space Mono',monospace;font-size:.64rem;color:var(--muted);padding:.4rem 0}
+.pal-save-row{display:flex;gap:.5rem}
+.pal-save-row input[type=text]{font-size:.72rem;padding:.55rem .75rem}
+.pal-save-btn{background:transparent;border:1px solid var(--accent);border-radius:2px;color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;padding:.55rem .9rem;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.pal-save-btn:hover{background:var(--accent);color:#0a0a0a}
+.pal-save-btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:520px){.pal-save-row{flex-wrap:wrap}.pal-save-btn{width:100%}}
+
 footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--border);letter-spacing:.1em;text-align:center}
 </style>
 </head>
@@ -274,6 +299,20 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
         <p class="section-label">Cor do centro do marcador</p>
         <input type="color" id="cornerDotColor" value="#000000"/>
       </div>
+    </div>
+  </div>
+
+  <!-- Paletas de cor (compartilhadas) -->
+  <div class="card">
+    <div class="pal-header">
+      <p class="section-label" style="margin-bottom:0">Paletas de cor</p>
+      <span class="pal-status" id="palStatus"></span>
+    </div>
+    <p class="pal-hint">Clique numa paleta pra aplicar. As paletas salvas ficam disponíveis pra toda a agência.</p>
+    <div class="pal-grid" id="palGrid"></div>
+    <div class="pal-save-row">
+      <input type="text" id="palName" placeholder="nome da paleta (ex: Kerry)" maxlength="40"/>
+      <button class="pal-save-btn" id="palSaveBtn" onclick="savePalette()">+ Salvar cores atuais</button>
     </div>
   </div>
 
@@ -1739,6 +1778,167 @@ async function shortenUrl(url) {
   return d.short;
 }
 
+// ── Paletas de cor (compartilhadas via /api/palettes) ─────────────────────
+var PALETTES = [];
+var DEFAULT_PALETTE = { id: 'padrao', name: 'Padrão', builtin: true,
+  colors: { dot:'#000000', bg:'#ffffff', bgAlpha:100, cornerSquare:'#000000', cornerDot:'#000000' } };
+
+function currentColors(){
+  return {
+    dot: document.getElementById('dotColor').value,
+    bg: document.getElementById('bgColor').value,
+    bgAlpha: parseInt(document.getElementById('bgAlpha').value, 10),
+    cornerSquare: document.getElementById('cornerSquareColor').value,
+    cornerDot: document.getElementById('cornerDotColor').value
+  };
+}
+function sameColors(a, b){
+  return a.dot.toLowerCase() === b.dot.toLowerCase() &&
+         a.bg.toLowerCase() === b.bg.toLowerCase() &&
+         Number(a.bgAlpha) === Number(b.bgAlpha) &&
+         a.cornerSquare.toLowerCase() === b.cornerSquare.toLowerCase() &&
+         a.cornerDot.toLowerCase() === b.cornerDot.toLowerCase();
+}
+function palStatus(text, cls){
+  var el = document.getElementById('palStatus');
+  if(!el) return;
+  el.textContent = text || '';
+  el.className = 'pal-status' + (cls ? ' ' + cls : '');
+}
+
+function applyPalette(p){
+  var c = p.colors;
+  document.getElementById('dotColor').value = c.dot;
+  document.getElementById('bgColor').value = c.bg;
+  document.getElementById('bgAlpha').value = c.bgAlpha;
+  document.getElementById('bgAlphaVal').textContent = c.bgAlpha + '%';
+  document.getElementById('cornerSquareColor').value = c.cornerSquare;
+  document.getElementById('cornerDotColor').value = c.cornerDot;
+  renderPalettes();
+  // se ja tem QR na tela, atualiza com as novas cores
+  var out = document.getElementById('output');
+  if(out && out.classList.contains('visible') && document.getElementById('urlInput').value.trim()){
+    generate();
+  }
+}
+
+function renderPalettes(){
+  var grid = document.getElementById('palGrid');
+  if(!grid) return;
+  var cur = currentColors();
+  grid.innerHTML = '';
+  [DEFAULT_PALETTE].concat(PALETTES).forEach(function(p){
+    var chip = document.createElement('div');
+    chip.className = 'pal-chip' + (sameColors(cur, p.colors) ? ' active' : '');
+    chip.title = 'Aplicar ' + p.name;
+
+    var sw = document.createElement('div');
+    sw.className = 'pal-swatches';
+    [p.colors.dot, p.colors.cornerSquare, p.colors.cornerDot, p.colors.bg].forEach(function(col, i){
+      var s = document.createElement('span');
+      s.style.background = col;
+      if(i === 3 && Number(p.colors.bgAlpha) < 100){
+        s.style.opacity = Math.max(p.colors.bgAlpha, 15) / 100;
+      }
+      sw.appendChild(s);
+    });
+    chip.appendChild(sw);
+
+    var nm = document.createElement('span');
+    nm.className = 'pal-name';
+    nm.textContent = p.name;
+    chip.appendChild(nm);
+
+    if(!p.builtin){
+      var del = document.createElement('button');
+      del.className = 'pal-del';
+      del.textContent = '✕';
+      del.title = 'Excluir paleta';
+      del.onclick = function(e){
+        e.stopPropagation();
+        // primeiro clique pede confirmacao, segundo exclui
+        if(!del.classList.contains('confirm')){
+          del.classList.add('confirm');
+          del.textContent = 'excluir?';
+          setTimeout(function(){
+            del.classList.remove('confirm');
+            del.textContent = '✕';
+          }, 3000);
+          return;
+        }
+        deletePalette(p);
+      };
+      chip.appendChild(del);
+    }
+
+    chip.onclick = function(){ applyPalette(p); };
+    grid.appendChild(chip);
+  });
+}
+
+async function loadPalettes(){
+  try {
+    var res = await fetch('/api/palettes', { cache: 'no-store' });
+    var d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'erro');
+    PALETTES = d.palettes || [];
+    palStatus('');
+  } catch(e){
+    palStatus('paletas indisponíveis', 'err');
+  }
+  renderPalettes();
+}
+
+async function savePalette(){
+  var nameEl = document.getElementById('palName');
+  var name = (nameEl.value || '').trim();
+  if(!name){ palStatus('dê um nome pra paleta', 'err'); nameEl.focus(); return; }
+  var btn = document.getElementById('palSaveBtn');
+  btn.disabled = true;
+  palStatus('salvando...');
+  try {
+    var res = await fetch('/api/palettes', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: name, colors: currentColors() })
+    });
+    var d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'erro');
+    PALETTES.push(d.palette);
+    nameEl.value = '';
+    palStatus('✓ paleta salva', 'ok');
+    renderPalettes();
+  } catch(e){
+    palStatus(e.message || 'não consegui salvar', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deletePalette(p){
+  palStatus('excluindo...');
+  try {
+    var res = await fetch('/api/palettes?id=' + encodeURIComponent(p.id), { method: 'DELETE' });
+    var d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'erro');
+    PALETTES = PALETTES.filter(function(x){ return x.id !== p.id; });
+    palStatus('paleta excluída');
+    renderPalettes();
+  } catch(e){
+    palStatus(e.message || 'não consegui excluir', 'err');
+  }
+}
+
+// marca a paleta ativa quando a pessoa mexe nas cores na mao
+['dotColor','bgColor','bgAlpha','cornerSquareColor','cornerDotColor'].forEach(function(id){
+  var el = document.getElementById(id);
+  if(el) el.addEventListener('input', renderPalettes);
+});
+document.getElementById('palName').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') savePalette();
+});
+loadPalettes();
+
 // ── Site Preview (favicon + title via Google) ──────────────────────────────
 function updatePreview(url) {
   if(!url || !url.startsWith('http')) {
@@ -1853,7 +2053,14 @@ async function generate() {
     status.textContent = 'encurtando...';
     status.className = 'shorten-status loading';
     try {
-      text = await shortenUrl(rawText);
+      // reaproveita o link se a URL e o apelido nao mudaram (evita duplicar no banco)
+      var cacheKey = rawText + '|' + ((document.getElementById('slugInput') || {}).value || '').trim().toLowerCase();
+      if(window.__lastShort && window.__lastShort.key === cacheKey){
+        text = window.__lastShort.short;
+      } else {
+        text = await shortenUrl(rawText);
+        window.__lastShort = { key: cacheKey, short: text };
+      }
       status.textContent = '✓ encurtado';
       status.className = 'shorten-status ok';
       document.getElementById('shortenedUrl').value = text;
