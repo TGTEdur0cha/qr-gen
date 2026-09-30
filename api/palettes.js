@@ -1,6 +1,7 @@
 // Paletas de cor compartilhadas pela agencia
 // GET    /api/palettes            -> { palettes: [{ id, name, colors, created }] }
 // POST   /api/palettes { name, colors } -> { palette }
+// PUT    /api/palettes?id=xxx { name?, colors? } -> { palette }
 // DELETE /api/palettes?id=xxx     -> { ok: true }
 //
 // colors = { dot, bg, bgAlpha, cornerSquare, cornerDot }
@@ -82,6 +83,29 @@ export default async function handler(req, res) {
 
       const palette = { id: newId(), name, colors, created: Date.now() };
       await kv(['HSET', KEY, palette.id, JSON.stringify(palette)]);
+      return res.status(200).json({ palette });
+    }
+
+    if (req.method === 'PUT') {
+      const id = String((req.query && req.query.id) || '').trim();
+      if (!/^[a-z0-9]{4,30}$/.test(id)) return res.status(400).json({ error: 'id invalido' });
+      const raw = await kv(['HGET', KEY, id]);
+      if (!raw) return res.status(404).json({ error: 'Essa paleta nao existe mais' });
+
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      const palette = JSON.parse(raw);
+      if (typeof body.name === 'string') {
+        const name = body.name.trim().slice(0, 40);
+        if (!name) return res.status(400).json({ error: 'Dê um nome pra paleta' });
+        palette.name = name;
+      }
+      if (body.colors !== undefined) {
+        const colors = cleanColors(body.colors);
+        if (!colors) return res.status(400).json({ error: 'Cores invalidas' });
+        palette.colors = colors;
+      }
+      palette.updated = Date.now();
+      await kv(['HSET', KEY, id, JSON.stringify(palette)]);
       return res.status(200).json({ palette });
     }
 

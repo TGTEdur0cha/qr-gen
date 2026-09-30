@@ -164,9 +164,19 @@ button.clear-history:hover{border-color:var(--red);color:var(--red)}
 .pal-chip.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .pal-swatches{display:flex;height:22px;border-radius:1px;overflow:hidden;border:1px solid var(--border)}
 .pal-swatches span{flex:1}
-.pal-name{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:1rem}
-.pal-del{position:absolute;right:.3rem;bottom:.3rem;background:transparent;border:none;color:var(--muted);font-size:.72rem;line-height:1;padding:.15rem .25rem;cursor:pointer;opacity:0;transition:opacity .15s,color .15s}
-.pal-chip:hover .pal-del{opacity:1}
+.pal-name{font-family:'Space Mono',monospace;font-size:.66rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:2.2rem}
+.pal-actions{position:absolute;right:.25rem;bottom:.25rem;display:flex;gap:.1rem;opacity:0;transition:opacity .15s}
+.pal-chip:hover .pal-actions,.pal-actions.show{opacity:1}
+.pal-edit{background:transparent;border:none;color:var(--muted);font-size:.72rem;line-height:1;padding:.15rem .25rem;cursor:pointer;transition:color .15s}
+.pal-edit:hover{color:var(--accent)}
+.pal-chip.editing{border-color:var(--accent);border-style:dashed}
+.pal-editing{display:none;font-family:'Space Mono',monospace;font-size:.64rem;color:var(--accent);margin-bottom:.5rem}
+.pal-editing.show{display:block}
+.pal-cancel-btn{display:none;background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--muted);font-family:'Space Mono',monospace;font-size:.66rem;padding:.55rem .8rem;cursor:pointer;white-space:nowrap}
+.pal-cancel-btn:hover{border-color:var(--red);color:var(--red)}
+.pal-cancel-btn.show{display:inline-block}
+.pal-del{position:static;background:transparent;border:none;color:var(--muted);font-size:.72rem;line-height:1;padding:.15rem .25rem;cursor:pointer;opacity:0;transition:opacity .15s,color .15s}
+.pal-del{opacity:1}
 .pal-del:hover{color:var(--red)}
 .pal-del.confirm{opacity:1;color:var(--red);font-family:'Space Mono',monospace;font-size:.58rem}
 .pal-empty{grid-column:1/-1;font-family:'Space Mono',monospace;font-size:.64rem;color:var(--muted);padding:.4rem 0}
@@ -310,9 +320,11 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.65rem;col
     </div>
     <p class="pal-hint">Clique numa paleta pra aplicar. As paletas salvas ficam disponíveis pra toda a agência.</p>
     <div class="pal-grid" id="palGrid"></div>
+    <p class="pal-editing" id="palEditing"></p>
     <div class="pal-save-row">
       <input type="text" id="palName" placeholder="nome da paleta (ex: Kerry)" maxlength="40"/>
       <button class="pal-save-btn" id="palSaveBtn" onclick="savePalette()">+ Salvar cores atuais</button>
+      <button class="pal-cancel-btn" id="palCancelBtn" onclick="cancelEdit()">Cancelar</button>
     </div>
   </div>
 
@@ -1780,6 +1792,7 @@ async function shortenUrl(url) {
 
 // ── Paletas de cor (compartilhadas via /api/palettes) ─────────────────────
 var PALETTES = [];
+var EDITING_ID = null;
 var DEFAULT_PALETTE = { id: 'padrao', name: 'Padrão', builtin: true,
   colors: { dot:'#000000', bg:'#ffffff', bgAlpha:100, cornerSquare:'#000000', cornerDot:'#000000' } };
 
@@ -1829,7 +1842,7 @@ function renderPalettes(){
   grid.innerHTML = '';
   [DEFAULT_PALETTE].concat(PALETTES).forEach(function(p){
     var chip = document.createElement('div');
-    chip.className = 'pal-chip' + (sameColors(cur, p.colors) ? ' active' : '');
+    chip.className = 'pal-chip' + (sameColors(cur, p.colors) ? ' active' : '') + (p.id === EDITING_ID ? ' editing' : '');
     chip.title = 'Aplicar ' + p.name;
 
     var sw = document.createElement('div');
@@ -1850,6 +1863,14 @@ function renderPalettes(){
     chip.appendChild(nm);
 
     if(!p.builtin){
+      var actions = document.createElement('div');
+      actions.className = 'pal-actions';
+      var edit = document.createElement('button');
+      edit.className = 'pal-edit';
+      edit.textContent = '✎';
+      edit.title = 'Editar paleta';
+      edit.onclick = function(e){ e.stopPropagation(); startEdit(p); };
+      actions.appendChild(edit);
       var del = document.createElement('button');
       del.className = 'pal-del';
       del.textContent = '✕';
@@ -1859,16 +1880,19 @@ function renderPalettes(){
         // primeiro clique pede confirmacao, segundo exclui
         if(!del.classList.contains('confirm')){
           del.classList.add('confirm');
+          actions.classList.add('show');
           del.textContent = 'excluir?';
           setTimeout(function(){
             del.classList.remove('confirm');
+            actions.classList.remove('show');
             del.textContent = '✕';
           }, 3000);
           return;
         }
         deletePalette(p);
       };
-      chip.appendChild(del);
+      actions.appendChild(del);
+      chip.appendChild(actions);
     }
 
     chip.onclick = function(){ applyPalette(p); };
@@ -1889,7 +1913,40 @@ async function loadPalettes(){
   renderPalettes();
 }
 
+function setEditMode(p){
+  EDITING_ID = p ? p.id : null;
+  var info = document.getElementById('palEditing');
+  var btn = document.getElementById('palSaveBtn');
+  var cancel = document.getElementById('palCancelBtn');
+  var nameEl = document.getElementById('palName');
+  if(p){
+    info.textContent = '✎ editando "' + p.name + '" — ajuste as cores ou o nome e salve';
+    info.classList.add('show');
+    btn.textContent = 'Salvar alterações';
+    cancel.classList.add('show');
+    nameEl.value = p.name;
+  } else {
+    info.textContent = '';
+    info.classList.remove('show');
+    btn.textContent = '+ Salvar cores atuais';
+    cancel.classList.remove('show');
+    nameEl.value = '';
+  }
+  renderPalettes();
+}
+function startEdit(p){
+  applyPalette(p);
+  setEditMode(p);
+  document.getElementById('palName').focus();
+  palStatus('');
+}
+function cancelEdit(){
+  setEditMode(null);
+  palStatus('');
+}
+
 async function savePalette(){
+  if(EDITING_ID) return updatePalette();
   var nameEl = document.getElementById('palName');
   var name = (nameEl.value || '').trim();
   if(!name){ palStatus('dê um nome pra paleta', 'err'); nameEl.focus(); return; }
@@ -1915,7 +1972,33 @@ async function savePalette(){
   }
 }
 
+async function updatePalette(){
+  var nameEl = document.getElementById('palName');
+  var name = (nameEl.value || '').trim();
+  if(!name){ palStatus('dê um nome pra paleta', 'err'); nameEl.focus(); return; }
+  var btn = document.getElementById('palSaveBtn');
+  btn.disabled = true;
+  palStatus('salvando...');
+  try {
+    var res = await fetch('/api/palettes?id=' + encodeURIComponent(EDITING_ID), {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: name, colors: currentColors() })
+    });
+    var d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'erro');
+    PALETTES = PALETTES.map(function(x){ return x.id === d.palette.id ? d.palette : x; });
+    setEditMode(null);
+    palStatus('✓ paleta atualizada', 'ok');
+  } catch(e){
+    palStatus(e.message || 'não consegui salvar', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function deletePalette(p){
+  if(p.id === EDITING_ID) setEditMode(null);
   palStatus('excluindo...');
   try {
     var res = await fetch('/api/palettes?id=' + encodeURIComponent(p.id), { method: 'DELETE' });
