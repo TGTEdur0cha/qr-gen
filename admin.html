@@ -4,33 +4,33 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <link rel="icon" type="image/png" href="/favicon.png"/>
-<title>QR Gen — Links</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<title>Links — Gerador de QR TGT</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0a0a;--surface:#141414;--border:#2a2a2a;--accent:#c8f135;--text:#f0f0f0;--muted:#666;--red:#ff5555;--green:#4caf50}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:2rem 1rem;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,241,53,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(200,241,53,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+:root{--bg:#231F20;--surface:#2B2728;--border:#3E393A;--accent:#ED1C24;--accent-hover:#D0141C;--text:#FFFFFF;--muted:#9D9D9C;--red:#FF8A80;--green:#7BC47F;--beige:#E2DBCE}
+body{background:var(--bg);color:var(--text);font-family:'Archivo',sans-serif;min-height:100vh;padding:2rem 1rem;overflow-x:hidden}
+body::before{content:none}
 .container{position:relative;z-index:1;width:100%;max-width:820px;margin:0 auto}
 header{margin-bottom:2rem}
-.tag{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}
+.tag{font-family:'Montserrat',sans-serif;font-size:.7rem;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}
 h1{font-size:clamp(2rem,6vw,3rem);font-weight:800;line-height:.95;letter-spacing:-.03em}
 h1 span{color:var(--accent)}
-.back{display:inline-block;margin-top:1.35rem;font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:2px}
+.back{display:inline-block;margin-top:1.35rem;font-family:'Montserrat',sans-serif;font-size:.68rem;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:2px}
 .back:hover{color:var(--accent);border-color:var(--accent)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:1.5rem;margin-bottom:1rem}
-.section-label{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.75rem}
-input[type=text],input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Space Mono',monospace;font-size:.8rem;padding:.75rem .9rem;outline:none;transition:border-color .2s}
+.section-label{font-family:'Montserrat',sans-serif;font-size:.65rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.75rem}
+input[type=text],input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Montserrat',sans-serif;font-size:.8rem;padding:.75rem .9rem;outline:none;transition:border-color .2s}
 input:focus{border-color:var(--accent)}
 input::placeholder{color:var(--muted)}
-button{font-family:'Syne',sans-serif;font-weight:700;border-radius:2px;cursor:pointer;transition:background .2s,transform .1s,border-color .2s,color .2s}
+button{font-family:'Archivo',sans-serif;font-weight:700;border-radius:2px;cursor:pointer;transition:background .2s,transform .1s,border-color .2s,color .2s}
 button:active{transform:scale(.97)}
-.btn-primary{background:var(--accent);border:none;color:#0a0a0a;font-size:.85rem;padding:.8rem 1.25rem;white-space:nowrap}
-.btn-primary:hover{background:#d9ff3f}
+.btn-primary{background:var(--accent);border:none;color:#fff;font-size:.85rem;padding:.8rem 1.25rem;white-space:nowrap}
+.btn-primary:hover{background:var(--accent-hover)}
 .btn-primary:disabled{background:#555;color:#888;cursor:not-allowed}
 .login-row{display:flex;gap:.75rem;align-items:stretch}
 .login-row input{flex:1}
-.msg{font-family:'Space Mono',monospace;font-size:.7rem;margin-top:.75rem;min-height:1rem}
+.msg{font-family:'Montserrat',sans-serif;font-size:.7rem;margin-top:.75rem;min-height:1rem}
 .msg.err{color:var(--red)}
 .msg.ok{color:var(--accent)}
 .msg.load{color:var(--muted)}
@@ -38,36 +38,43 @@ button:active{transform:scale(.97)}
 /* Barra de ferramentas */
 .toolbar{display:flex;gap:.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
 .toolbar input{flex:1;min-width:200px}
-.count{font-family:'Space Mono',monospace;font-size:.68rem;color:var(--muted);white-space:nowrap}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;font-size:.66rem;padding:.55rem .8rem}
+.count{font-family:'Montserrat',sans-serif;font-size:.68rem;color:var(--muted);white-space:nowrap}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-weight:400;font-size:.66rem;padding:.55rem .8rem}
 .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Lista de links */
 .link-item{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:1rem 1.1rem;margin-bottom:.6rem;transition:border-color .2s}
 .link-item.dirty{border-color:var(--accent)}
 .link-head{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
-.name-input{width:100%;background:transparent !important;border:1px solid transparent !important;border-radius:2px;color:var(--text);font-family:'Syne',sans-serif !important;font-weight:700;font-size:1rem !important;padding:.3rem .45rem !important;margin:-.3rem 0 .35rem -.45rem;outline:none;transition:border-color .2s,background .2s}
+.name-input{width:100%;background:transparent !important;border:1px solid transparent !important;border-radius:2px;color:var(--text);font-family:'Archivo',sans-serif !important;font-weight:700;font-size:1rem !important;padding:.3rem .45rem !important;margin:-.3rem 0 .35rem -.45rem;outline:none;transition:border-color .2s,background .2s}
 .name-input:hover{border-color:var(--border) !important}
 .name-input:focus{border-color:var(--accent) !important;background:var(--bg) !important}
 .name-input::placeholder{color:var(--muted);font-weight:400;font-style:italic}
-.slug{font-family:'Space Mono',monospace;font-size:.82rem;font-weight:700;color:var(--accent)}
+.slug{font-family:'Montserrat',sans-serif;font-size:.82rem;font-weight:700;color:var(--accent)}
 .slug .dim{color:var(--muted);font-weight:400}
-.meta{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted);margin-left:auto;text-align:right;white-space:nowrap}
+.meta{font-family:'Montserrat',sans-serif;font-size:.62rem;color:var(--muted);margin-left:auto;text-align:right;white-space:nowrap}
 .meta b{color:var(--text);font-weight:400}
 .edit-row{display:flex;gap:.5rem;align-items:stretch}
 .edit-row input{flex:1;font-size:.72rem;padding:.55rem .7rem}
-.btn-save{background:var(--accent);border:none;color:#0a0a0a;font-size:.7rem;padding:.55rem .9rem;white-space:nowrap;opacity:.35;pointer-events:none}
+.btn-save{background:var(--accent);border:none;color:#fff;font-size:.7rem;padding:.55rem .9rem;white-space:nowrap;opacity:.35;pointer-events:none}
 .link-item.dirty .btn-save{opacity:1;pointer-events:auto}
 .btn-save.saved{background:var(--green);color:#fff;opacity:1}
-.btn-copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;font-size:.66rem;padding:.55rem .7rem;white-space:nowrap}
+.btn-copy{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Montserrat',sans-serif;font-weight:400;font-size:.66rem;padding:.55rem .7rem;white-space:nowrap}
 .btn-copy:hover{border-color:var(--accent);color:var(--accent)}
 .btn-copy.copied{border-color:var(--green);color:var(--green)}
-.row-msg{font-family:'Space Mono',monospace;font-size:.62rem;margin-top:.45rem;min-height:.8rem}
+.row-msg{font-family:'Montserrat',sans-serif;font-size:.62rem;margin-top:.45rem;min-height:.8rem}
 .row-msg.err{color:var(--red)}
 .row-msg.ok{color:var(--green)}
-.empty{font-family:'Space Mono',monospace;font-size:.72rem;color:var(--muted);text-align:center;padding:2.5rem 1rem;border:1px dashed var(--border);border-radius:2px}
+.empty{font-family:'Montserrat',sans-serif;font-size:.72rem;color:var(--muted);text-align:center;padding:2.5rem 1rem;border:1px dashed var(--border);border-radius:2px}
 .hidden{display:none}
-footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.62rem;color:var(--border);letter-spacing:.1em;text-align:center}
+.brand-logo{display:block;width:170px;height:auto;margin-bottom:1.5rem}
+.brand-header .tag{color:var(--beige);font-weight:600;letter-spacing:.22em;font-size:.68rem}
+.brand-header h1{font-family:'Archivo',sans-serif;font-weight:800;font-stretch:115%;font-size:clamp(2.2rem,5vw,3.4rem);line-height:.98;letter-spacing:-.025em;color:var(--text)}
+.brand-arrow{display:inline-block;width:.62em;height:.62em;margin-left:.18em;color:var(--accent);vertical-align:baseline}
+.section-label{font-weight:600}
+.slug{color:var(--accent)}
+.name-input{font-family:'Archivo',sans-serif !important;font-stretch:110%}
+footer{margin-top:2.5rem;font-family:'Montserrat',sans-serif;font-size:.62rem;color:var(--border);letter-spacing:.1em;text-align:center}
 @media(max-width:560px){
   .meta{margin-left:0;width:100%;text-align:left}
   .edit-row{flex-wrap:wrap}
@@ -77,9 +84,10 @@ footer{margin-top:2.5rem;font-family:'Space Mono',monospace;font-size:.62rem;col
 </head>
 <body>
 <div class="container">
-  <header>
-    <p class="tag">// area restrita</p>
-    <h1>GERENCIAR<br/><span>LINKS</span></h1>
+  <header class="brand-header">
+    <img class="brand-logo" src="/logo-tgt.png" alt="TGT — A agência além do marketing"/>
+    <p class="tag">Área restrita</p>
+    <h1>Gerenciar<br/>links<svg class="brand-arrow" viewBox="0 0 100 100" aria-hidden="true"><path d="M16 84 L80 20 M34 18 H82 V66" fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="square"/></svg></h1>
     <a class="back" href="/">&larr; voltar pro gerador</a>
   </header>
 
